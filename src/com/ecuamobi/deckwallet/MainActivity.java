@@ -1,8 +1,13 @@
+/**
+ * @author EcuaMobi
+ */
 package com.ecuamobi.deckwallet;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Fragment;
+import android.app.ProgressDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -26,13 +31,13 @@ import android.text.TextWatcher;
 import android.text.method.LinkMovementMethod;
 import android.text.style.ClickableSpan;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.BaseAdapter;
@@ -50,12 +55,15 @@ import com.ecuamobi.deckwallet.util.Renderer;
 import com.ecuamobi.deckwallet.util.Util;
 
 public class MainActivity extends Activity {
-	private static final String TAG = MainActivity.class.getName();
-	protected static final int NUMBER_ADDRESSES = 20;
+	protected static final String HELP_URL = "http://x.co/deckhelp";
+	protected static final int NUMBER_OF_CARDS = 52;
+	protected static final int NUMBER_ADDRESSES = 20; // Must not exceed
+														// NUMBER_OF_CARDS-30 //
 	private static final String SCHEME_BITCOIN = "bitcoin:";
 	private static final String ADDRESS_DONATE = "17GXYDJEDUqw7hYtqquyN1kYWmtcmFKhK8";
 	private Menu menu;
 	public String lastSeed = null, temporalSeed = null;
+	private PlaceholderFragment fragment;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -69,10 +77,10 @@ public class MainActivity extends Activity {
 	}
 
 	private void init(Bundle savedInstanceState) {
+		fragment = new PlaceholderFragment();
 		if (savedInstanceState == null) {
 			getFragmentManager().beginTransaction()
-					.replace(R.id.container, new PlaceholderFragment())
-					.commit();
+					.replace(R.id.container, fragment).commit();
 		}
 		lastSeed = null;
 		temporalSeed = null;
@@ -89,6 +97,7 @@ public class MainActivity extends Activity {
 	public void showFinalMenuItems(boolean show) {
 		this.menu.findItem(R.id.action_check).setVisible(show);
 		this.menu.findItem(R.id.action_clear).setVisible(show);
+		this.menu.findItem(R.id.action_share).setVisible(show);
 	}
 
 	@Override
@@ -111,6 +120,15 @@ public class MainActivity extends Activity {
 			}
 			return true;
 		}
+		if (id == R.id.action_help) {
+			try {
+				Intent intent = new Intent(Intent.ACTION_VIEW);
+				intent.setData(Uri.parse(HELP_URL));
+				startActivity(intent);
+			} catch (Exception e) {
+			}
+			return true;
+		}
 		if (id == R.id.action_clear) {
 			AlertDialog.Builder builder = new AlertDialog.Builder(this);
 			builder.setTitle(R.string.clear);
@@ -120,6 +138,8 @@ public class MainActivity extends Activity {
 				@Override
 				public void onClick(DialogInterface dialog, int which) {
 					init(null);
+					lastSeed = temporalSeed = null;
+					showFinalMenuItems(false);
 				}
 			});
 			builder.show();
@@ -135,6 +155,7 @@ public class MainActivity extends Activity {
 				public void onClick(DialogInterface dialog, int which) {
 					final String seed = temporalSeed;
 					init(null);
+					showFinalMenuItems(false);
 					lastSeed = seed;
 					Util.showToast(MainActivity.this, R.string.reenter_check,
 							Toast.LENGTH_LONG);
@@ -143,7 +164,47 @@ public class MainActivity extends Activity {
 			builder.show();
 			return true;
 		}
+		if (id == R.id.action_share) {
+			new getAllAddresses().execute();
+		}
 		return super.onOptionsItemSelected(item);
+	}
+
+	private class getAllAddresses extends AsyncTask<Void, Void, String> {
+		private ProgressDialog progressdialog;
+
+		@Override
+		protected void onPreExecute() {
+			super.onPreExecute();
+			progressdialog = new ProgressDialog(MainActivity.this);
+			progressdialog.setMessage(getText(R.string.wait));
+			progressdialog.show();
+		}
+
+		@Override
+		protected String doInBackground(Void... params) {
+			String textToShare = "";
+			for (int pos = 0; pos < NUMBER_ADDRESSES; ++pos) {
+				textToShare += fragment.getAddress(pos).address + "\n";
+			}
+
+			return textToShare;
+		}
+
+		@Override
+		protected void onPostExecute(String textToShare) {
+			super.onPostExecute(textToShare);
+
+			Intent intent = new Intent(Intent.ACTION_SEND);
+			intent.setType("text/plain");
+			intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.addresses));
+			intent.putExtra(Intent.EXTRA_TEXT, textToShare);
+			startActivity(Intent.createChooser(intent,
+					getString(R.string.addresses)));
+
+			progressdialog.dismiss();
+		}
+
 	}
 
 	/**
@@ -152,7 +213,7 @@ public class MainActivity extends Activity {
 	public static class PlaceholderFragment extends Fragment {
 
 		private LayoutInflater inflater;
-		private String[] selectedSuits = new String[52];
+		private String[] selectedSuits = new String[NUMBER_OF_CARDS];
 		private String[] selectedRanks = new String[selectedSuits.length];
 		private Drawable[] suitDrawables = new Drawable[5];
 		private Drawable[] rankDrawables = new Drawable[14];
@@ -224,6 +285,21 @@ public class MainActivity extends Activity {
 									: View.GONE);
 				}
 			});
+			final View passwordEnabler = rootView
+					.findViewById(R.id.password_enabler);
+			passwordEnabler.setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					passwordEnabler.setVisibility(View.GONE);
+					password.setVisibility(View.VISIBLE);
+					password.requestFocus();
+					InputMethodManager inputMethodManager = (InputMethodManager) getActivity()
+							.getSystemService(Context.INPUT_METHOD_SERVICE);
+					inputMethodManager.toggleSoftInputFromWindow(
+							password.getApplicationWindowToken(),
+							InputMethodManager.SHOW_FORCED, 0);
+				}
+			});
 
 			pagerAddresses = (ViewPager) rootView
 					.findViewById(R.id.vp_addresses);
@@ -253,7 +329,13 @@ public class MainActivity extends Activity {
 										: R.string.select_unique_card);
 						if (0 < page) {
 							pager.setCurrentItem(page - 1);
-							maxPageSeen = page - 1;
+							// If the user tried to skip a page before setting
+							// the card,
+							// rest the maxPage so it auto-scrolls after setting
+							// it
+							if (notSelected) {
+								maxPageSeen = page - 1;
+							}
 						}
 					} else if (page < selectedSuits.length) {
 						// Current suit
@@ -264,8 +346,6 @@ public class MainActivity extends Activity {
 							adapter.getSpinner(page, false).setSelection(
 									selected);
 							isItemSelectedEnabled = true;
-							Log.d(TAG, "Set suit(" + pager.getCurrentItem()
-									+ "): " + selected);
 						}
 
 						// Current rank
@@ -276,16 +356,10 @@ public class MainActivity extends Activity {
 							adapter.getSpinner(page, true).setSelection(
 									selected);
 							isItemSelectedEnabled = true;
-							Log.d(TAG, "Set rank(" + pager.getCurrentItem()
-									+ "): " + selected);
 						}
 					}
 				}
 			});
-
-			// KeyPair pair = BTCUtils.generateBrainWifKey(false, "abc");
-			// address.setText(pair.address);
-			// key.setText(pair.privateKey.privateKeyEncoded);
 
 			return rootView;
 		}
@@ -381,21 +455,28 @@ public class MainActivity extends Activity {
 										mainActivity.showFinalMenuItems(true);
 										if (null == mainActivity.lastSeed) {
 											// Store this seed to re-check
-											mainActivity.temporalSeed = getSeed(0);
+											mainActivity.temporalSeed = Util
+													.doubleSha256(getSeed(0));
 										} else {
 											// Check the generated seed with the
 											// last one
-											int message;
-											if (mainActivity.lastSeed
-													.equals(getSeed(0))) {
+											int message, title, icon = 0;
+											if (mainActivity.lastSeed.equals(Util
+													.doubleSha256(getSeed(0)))) {
+												title = R.string.check_ok;
 												message = R.string.last_seed_match;
 											} else {
+												title = R.string.check_ko;
 												message = R.string.last_seed_missmatch;
+												icon = R.drawable.ic_dialog_alert_holo_light;
 											}
 
 											AlertDialog.Builder builder = new AlertDialog.Builder(
 													getActivity());
-											builder.setTitle(R.string.check);
+											builder.setTitle(title);
+											if (0 != icon) {
+												builder.setIcon(icon);
+											}
 											builder.setMessage(message);
 											builder.setPositiveButton(
 													R.string.ok, null);
@@ -410,9 +491,8 @@ public class MainActivity extends Activity {
 					RelativeLayout card = (RelativeLayout) inflater.inflate(
 							R.layout.card, (ViewGroup) container, false);
 
-					((TextView) card.findViewById(R.id.id_number))
-							.setText(getString(R.string.x_of_y, position + 1,
-									selectedSuits.length));
+					((TextView) card.findViewById(R.id.id_number)).setText(""
+							+ (position + 1));
 
 					// SUIT
 					final Spinner suit = (Spinner) card
@@ -432,8 +512,6 @@ public class MainActivity extends Activity {
 									}
 
 									final int page = pager.getCurrentItem();
-									Log.d(TAG, "Save suit(" + page + "): "
-											+ SUITS[position]);
 									selectedSuits[page] = SUITS[position];
 									if (!isReapeatedCard(page, true)) {
 										autoChangePage(page);
@@ -466,8 +544,6 @@ public class MainActivity extends Activity {
 									}
 
 									final int page = pager.getCurrentItem();
-									Log.d(TAG, "Save rank(" + page + "): "
-											+ RANKS[position]);
 									selectedRanks[page] = RANKS[position];
 									if (!isReapeatedCard(page, true)) {
 										autoChangePage(page);
@@ -495,7 +571,6 @@ public class MainActivity extends Activity {
 				if (page == maxPageSeen && isCardSelected(page)
 						&& page < selectedSuits.length) {
 					pager.setCurrentItem(page + 1);
-					Log.d(TAG, "Next page");
 				}
 			}
 
@@ -628,8 +703,7 @@ public class MainActivity extends Activity {
 							(ViewGroup) container, false);
 
 					((TextView) address.findViewById(R.id.id_number))
-							.setText(getString(R.string.x_of_y, position + 1,
-									getCount()));
+							.setText("" + (position + 1));
 
 					new LoadAddress(position, address).execute();
 
@@ -749,6 +823,7 @@ public class MainActivity extends Activity {
 								.createImage(screenSize / 2);
 					}
 
+					@SuppressLint("InflateParams")
 					@Override
 					protected void onPostExecute(final Bitmap bitmap) {
 						if (bitmap != null) {

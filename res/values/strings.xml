@@ -9,7 +9,6 @@
     <string name="yes">Yes</string>
     <string name="no">No</string>
     <string name="ok">OK</string>
-    <string name="x_of_y">%1$d / %2$d</string>
     <string name="select_suit_rank">Select both the rank and the suit</string>
     <string name="select_unique_card">Select a unique card</string>
     <string name="repeated_card">Repeated card</string>
@@ -22,16 +21,22 @@
     <string name="print">Print</string>
     <string name="share">Share</string>
     <string name="address">Address</string>
+    <string name="addresses">Addresses</string>
     <string name="private_key">Private key</string>
     <string name="no_wallet">No compatible wallet was found</string>
+    <string name="help">Help</string>
     <string name="check">Check</string>
-    <string name="check_confirm">Do you want to clear everything so you can re-enter the information and double check the generated addresses?</string>
+    <string name="check_ok">Check succeeded</string>
+    <string name="check_ko">Check failed!</string>
+    <string name="check_confirm">Do you want to clear this information? You will be asked to enter it again to double check the generated wallet.</string>
     <string name="clear">Clear</string>
     <string name="clear_confirm">Do you want to clear all the entered information?</string>
     <string name="donate">Donate</string>
     <string name="donate_copied">Donation address has been copied to clipboard</string>
     <string name="reenter_check">Re-enter the same card order and password</string>
-    <string name="last_seed_match">The generated address matches the previous one</string>
-    <string name="last_seed_missmatch">The generated address does NOT match the previous one</string>
+    <string name="last_seed_match">The generated wallet matches the previous one</string>
+    <string name="last_seed_missmatch">The generated wallet does NOT match the previous one</string>
+    <string name="share_addresses">Share addresses</string>
+    <string name="wait">Please wait&#8230;</string>
 
 </resources>
