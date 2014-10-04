@@ -1,0 +1,25 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.ecuamobi.deckwallet.MainActivity" >
+
+    <item
+        android:id="@+id/action_check"
+        android:icon="@drawable/ic_action_navigation_accept"
+        android:orderInCategory="100"
+        android:showAsAction="ifRoom"
+        android:title="@string/check"
+        android:visible="false"/>
+    <item
+        android:id="@+id/action_clear"
+        android:icon="@drawable/ic_action_navigation_cancel"
+        android:orderInCategory="200"
+        android:showAsAction="ifRoom"
+        android:title="@string/clear"
+        android:visible="false"/>
+    <item
+        android:id="@+id/action_donate"
+        android:orderInCategory="300"
+        android:showAsAction="never"
+        android:title="@string/donate"/>
+
+</menu>
