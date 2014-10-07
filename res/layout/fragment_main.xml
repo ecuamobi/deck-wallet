@@ -13,6 +13,24 @@
         android:layout_height="wrap_content"
         android:orientation="vertical" >
 
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/number_cards" />
+
+            <Spinner
+                android:id="@+id/spin_cards"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:entries="@array/card_options"
+                android:prompt="@string/number_cards" />
+        </LinearLayout>
+
         <TextView
             android:id="@+id/password_enabler"
             style="@style/MyEditText"

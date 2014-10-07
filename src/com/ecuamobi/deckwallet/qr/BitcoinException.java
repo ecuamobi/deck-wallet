@@ -23,7 +23,8 @@
 package com.ecuamobi.deckwallet.qr;
 
 public final class BitcoinException extends Exception {
-    public static final int ERR_NO_SPENDABLE_OUTPUTS_FOR_THE_ADDRESS = 0;
+	private static final long serialVersionUID = -7694906244473235598L;
+	public static final int ERR_NO_SPENDABLE_OUTPUTS_FOR_THE_ADDRESS = 0;
     public static final int ERR_INSUFFICIENT_FUNDS = 1;
     public static final int ERR_WRONG_TYPE = 2;
     public static final int ERR_BAD_FORMAT = 3;

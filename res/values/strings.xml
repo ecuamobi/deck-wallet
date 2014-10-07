@@ -32,11 +32,42 @@
     <string name="clear">Clear</string>
     <string name="clear_confirm">Do you want to clear all the entered information?</string>
     <string name="donate">Donate</string>
+    <string name="rate">Rate this app</string>
     <string name="donate_copied">Donation address has been copied to clipboard</string>
     <string name="reenter_check">Re-enter the same card order and password</string>
     <string name="last_seed_match">The generated wallet matches the previous one</string>
     <string name="last_seed_missmatch">The generated wallet does NOT match the previous one</string>
     <string name="share_addresses">Share addresses</string>
-    <string name="wait">Please wait&#8230;</string>
+    <string name="generating_addresses">Generating addresses&#8230;</string>
+    <string name="not_generate_address">Could not generate a valid address</string>
+    <string name="cards">Cards</string>
+    <string name="number_cards">Number of cards</string>
+    <string name="change_number">Change number of cards</string>
+    <string name="change_number_reset">All the entered data must be cleared in order to change the number of cards. Do you want to continue?</string>
+
+    <string-array name="card_options">
+        <item>52</item>
+        <item>51</item>
+        <item>50</item>
+        <item>49</item>
+        <item>48</item>
+        <item>47</item>
+        <item>46</item>
+        <item>45</item>
+        <item>44</item>
+        <item>43</item>
+        <item>42</item>
+        <item>41</item>
+        <item>40</item>
+        <item>39</item>
+        <item>38</item>
+        <item>37</item>
+        <item>36</item>
+        <item>35</item>
+        <item>34</item>
+        <item>33</item>
+        <item>32</item>
+        <item>31</item>
+    </string-array>
 
 </resources>

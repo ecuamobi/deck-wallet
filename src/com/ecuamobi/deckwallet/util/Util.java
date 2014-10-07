@@ -2,6 +2,8 @@
  The MIT License (MIT)
 
  Copyright (c) 2013-2014 Valentin Konovalov
+ 
+ Edited by EcuaMobi
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -84,17 +86,21 @@ public final class Util {
 			}
 			byte[] secret;
 			BigInteger privateKeyBigInteger;
-			do {
-				secret = digestSha.digest(seed.getBytes());
-				privateKeyBigInteger = new BigInteger(1, secret);
-				System.arraycopy(secret, 0, rawPrivateKey, 1, secret.length);
-				digestSha.update(rawPrivateKey, 0, rawPrivateKey.length - 4);
-				byte[] check = digestSha.digest(digestSha.digest());
-				System.arraycopy(check, 0, rawPrivateKey,
-						rawPrivateKey.length - 4, 4);
-			} while (privateKeyBigInteger.compareTo(BigInteger.ONE) < 0
+
+			secret = digestSha.digest(seed.getBytes());
+			privateKeyBigInteger = new BigInteger(1, secret);
+			System.arraycopy(secret, 0, rawPrivateKey, 1, secret.length);
+			digestSha.update(rawPrivateKey, 0, rawPrivateKey.length - 4);
+			byte[] check = digestSha.digest(digestSha.digest());
+			System.arraycopy(check, 0, rawPrivateKey, rawPrivateKey.length - 4,
+					4);
+			if (privateKeyBigInteger.compareTo(BigInteger.ONE) < 0
 					|| privateKeyBigInteger.compareTo(LARGEST_PRIVATE_KEY) > 0
-					|| !verifyChecksum(rawPrivateKey));
+					|| !verifyChecksum(rawPrivateKey)) {
+				// Could not generate a valid key from this seed
+				return null;
+			}
+
 			return new KeyPair(new PrivateKeyInfo(PrivateKeyInfo.TYPE_WIF,
 					encodeBase58(rawPrivateKey), privateKeyBigInteger,
 					isPublicKeyCompressed));

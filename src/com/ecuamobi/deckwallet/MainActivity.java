@@ -1,5 +1,25 @@
 /**
- * @author EcuaMobi
+ The MIT License (MIT)
+
+ Copyright (c) 2014 EcuaMobi
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
  */
 package com.ecuamobi.deckwallet;
 
@@ -14,6 +34,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -21,6 +42,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.preference.PreferenceManager;
 import android.support.v4.print.PrintHelper;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
@@ -56,11 +78,18 @@ import com.ecuamobi.deckwallet.util.Util;
 
 public class MainActivity extends Activity {
 	protected static final String HELP_URL = "http://x.co/deckhelp";
-	protected static final int NUMBER_OF_CARDS = 52;
-	protected static final int NUMBER_ADDRESSES = 20; // Must not exceed
-														// NUMBER_OF_CARDS-30 //
+	protected static final String PACKAGE = "com.ecuamobi.deckwallet";
+	protected static final String NUMBER_OF_CARDS = PACKAGE + ".number_cards";
+	private static final String MARKET_PREFIX_LOCAL = "market://details?id=";
+	private static final String MARKET_PREFIX_REMOTE = "https://play.google.com/store/apps/details?id=";
 	private static final String SCHEME_BITCOIN = "bitcoin:";
 	private static final String ADDRESS_DONATE = "17GXYDJEDUqw7hYtqquyN1kYWmtcmFKhK8";
+
+	protected final String SUITS[] = new String[] { null, "S", "C", "D", "H" };
+	protected final String RANKS[] = new String[] { null, "A", "2", "3", "4",
+			"5", "6", "7", "8", "9", "T", "J", "Q", "K" };
+
+	protected int numberOfCards;
 	private Menu menu;
 	public String lastSeed = null, temporalSeed = null;
 	private PlaceholderFragment fragment;
@@ -129,6 +158,18 @@ public class MainActivity extends Activity {
 			}
 			return true;
 		}
+		if (id == R.id.action_rate) {
+			try {
+				Intent intent = new Intent(Intent.ACTION_VIEW);
+				intent.setData(Uri.parse(MARKET_PREFIX_LOCAL + PACKAGE));
+				startActivity(intent);
+			} catch (Exception e) {
+				Intent intent = new Intent(Intent.ACTION_VIEW);
+				intent.setData(Uri.parse(MARKET_PREFIX_REMOTE + PACKAGE));
+				startActivity(intent);
+			}
+			return true;
+		}
 		if (id == R.id.action_clear) {
 			AlertDialog.Builder builder = new AlertDialog.Builder(this);
 			builder.setTitle(R.string.clear);
@@ -137,9 +178,7 @@ public class MainActivity extends Activity {
 			builder.setPositiveButton(R.string.yes, new OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialog, int which) {
-					init(null);
-					lastSeed = temporalSeed = null;
-					showFinalMenuItems(false);
+					clear();
 				}
 			});
 			builder.show();
@@ -165,35 +204,83 @@ public class MainActivity extends Activity {
 			return true;
 		}
 		if (id == R.id.action_share) {
-			new getAllAddresses().execute();
+			new GetAllAddresses().execute();
 		}
 		return super.onOptionsItemSelected(item);
 	}
 
-	private class getAllAddresses extends AsyncTask<Void, Void, String> {
+	public void clear() {
+		init(null);
+		lastSeed = temporalSeed = null;
+		showFinalMenuItems(false);
+	}
+
+	private class GetAllAddresses extends AsyncTask<Void, Integer, String> {
 		private ProgressDialog progressdialog;
+		private boolean isCancelled;
 
 		@Override
 		protected void onPreExecute() {
 			super.onPreExecute();
+			isCancelled = false;
 			progressdialog = new ProgressDialog(MainActivity.this);
-			progressdialog.setMessage(getText(R.string.wait));
+			progressdialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+			progressdialog.setMessage(getText(R.string.generating_addresses));
+			progressdialog.setIndeterminate(false);
+			progressdialog.setMax(numberOfCards);
+			progressdialog.setProgress(0);
+			progressdialog
+					.setOnCancelListener(new DialogInterface.OnCancelListener() {
+						@Override
+						public void onCancel(DialogInterface dialog) {
+							isCancelled = true;
+							GetAllAddresses.this.cancel(true);
+						}
+					});
+			progressdialog.setCanceledOnTouchOutside(false);
 			progressdialog.show();
 		}
 
 		@Override
 		protected String doInBackground(Void... params) {
-			String textToShare = "";
-			for (int pos = 0; pos < NUMBER_ADDRESSES; ++pos) {
-				textToShare += fragment.getAddress(pos).address + "\n";
-			}
+			try {
+				String textToShare = "", address;
+				KeyPair keyPair;
+				for (int pos = 0; pos < numberOfCards; ++pos) {
+					if (isCancelled) {
+						return null;
+					}
 
-			return textToShare;
+					keyPair = fragment.getAddress(pos);
+					if (null == keyPair) {
+						address = getString(R.string.not_generate_address);
+					} else {
+						address = fragment.getAddress(pos).address;
+					}
+					textToShare += (pos + 1) + ") " + address + "\n";
+					// Post progress
+					publishProgress(pos + 1);
+				}
+
+				return textToShare;
+			} catch (Exception e) {
+				return null;
+			}
+		}
+
+		@Override
+		protected void onProgressUpdate(Integer... progress) {
+			super.onProgressUpdate(progress);
+
+			progressdialog.setProgress(progress[0]);
 		}
 
 		@Override
 		protected void onPostExecute(String textToShare) {
 			super.onPostExecute(textToShare);
+			if (null == textToShare) {
+				return;
+			}
 
 			Intent intent = new Intent(Intent.ACTION_SEND);
 			intent.setType("text/plain");
@@ -210,19 +297,17 @@ public class MainActivity extends Activity {
 	/**
 	 * A placeholder fragment containing a simple view.
 	 */
-	public static class PlaceholderFragment extends Fragment {
+	public class PlaceholderFragment extends Fragment {
 
 		private LayoutInflater inflater;
-		private String[] selectedSuits = new String[NUMBER_OF_CARDS];
-		private String[] selectedRanks = new String[selectedSuits.length];
+		private String[] selectedSuits;
+		private String[] selectedRanks;
 		private Drawable[] suitDrawables = new Drawable[5];
 		private Drawable[] rankDrawables = new Drawable[14];
-		public static final String SUITS[] = new String[] { null, "S", "C",
-				"D", "H" };
-		public static final String RANKS[] = new String[] { null, "A", "2",
-				"3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K" };
 		private ViewPager pager, pagerAddresses;
 		private EditText password, password2;
+		private Spinner spinNumberCards;
+		private SharedPreferences preferences;
 
 		private boolean isItemSelectedEnabled = true;
 
@@ -234,6 +319,13 @@ public class MainActivity extends Activity {
 		@Override
 		public View onCreateView(LayoutInflater inflater, ViewGroup container,
 				Bundle savedInstanceState) {
+			preferences = PreferenceManager
+					.getDefaultSharedPreferences(getActivity());
+			numberOfCards = preferences.getInt(NUMBER_OF_CARDS, 52);
+
+			selectedSuits = new String[numberOfCards];
+			selectedRanks = new String[numberOfCards];
+
 			this.inflater = inflater;
 			// Suits
 			int pos = 0;
@@ -264,6 +356,81 @@ public class MainActivity extends Activity {
 
 			final View rootView = inflater.inflate(R.layout.fragment_main,
 					container, false);
+
+			spinNumberCards = (Spinner) rootView.findViewById(R.id.spin_cards);
+			final int currentSelection = 52 - numberOfCards;
+			spinNumberCards.setSelection(currentSelection);
+			spinNumberCards.post(new Runnable() {
+				public void run() {
+					spinNumberCards
+							.setOnItemSelectedListener(new OnItemSelectedListener() {
+
+								@Override
+								public void onItemSelected(
+										AdapterView<?> adapterView, View view,
+										final int position, long id) {
+
+									if (position == currentSelection) {
+										return;
+									}
+
+									// Do we need a confirmation?
+									if (maxPageSeen == 0
+											&& null == selectedRanks[0]
+											&& null == selectedSuits[0]
+											&& 0 == password.getText()
+													.toString().length()) {
+										// No need to confirm
+										setNewNumberOfCards(position);
+										return;
+									}
+
+									// Else:
+
+									final AlertDialog.Builder builder = new AlertDialog.Builder(
+											getActivity());
+									builder.setTitle(R.string.change_number);
+									builder.setMessage(R.string.change_number_reset);
+									builder.setPositiveButton(R.string.yes,
+											new OnClickListener() {
+												@Override
+												public void onClick(
+														DialogInterface dialog,
+														int which) {
+													setNewNumberOfCards(position);
+												}
+											});
+									builder.setNegativeButton(R.string.no,
+											new OnClickListener() {
+												@Override
+												public void onClick(
+														DialogInterface dialog,
+														int which) {
+													spinNumberCards
+															.setSelection(52 - numberOfCards);
+												}
+											});
+									builder.setCancelable(false);
+									builder.show();
+
+								}
+
+								@Override
+								public void onNothingSelected(
+										AdapterView<?> arg0) {
+								}
+
+								public void setNewNumberOfCards(int position) {
+									preferences
+											.edit()
+											.putInt(NUMBER_OF_CARDS,
+													52 - position).commit();
+
+									((MainActivity) getActivity()).clear();
+								}
+							});
+				}
+			});
 
 			password = (EditText) rootView.findViewById(R.id.password);
 			password2 = (EditText) rootView.findViewById(R.id.password_confirm);
@@ -401,7 +568,6 @@ public class MainActivity extends Activity {
 
 			@Override
 			public int getCount() {
-				// Add 1 for the final "Go!" button
 				return selectedSuits.length + 1;
 			}
 
@@ -426,6 +592,7 @@ public class MainActivity extends Activity {
 				// Check if element already exists
 				if (null != elements[position]) {
 					item = elements[position];
+
 				} else if (position == getCount() - 1) {
 					// This is the last item
 					item = inflater.inflate(R.layout.card_go,
@@ -487,7 +654,6 @@ public class MainActivity extends Activity {
 								}
 							});
 				} else {
-
 					RelativeLayout card = (RelativeLayout) inflater.inflate(
 							R.layout.card, (ViewGroup) container, false);
 
@@ -674,7 +840,7 @@ public class MainActivity extends Activity {
 
 			@Override
 			public int getCount() {
-				return NUMBER_ADDRESSES;
+				return numberOfCards;
 			}
 
 			/**
@@ -731,27 +897,38 @@ public class MainActivity extends Activity {
 				@Override
 				protected void onPostExecute(final KeyPair keyPair) {
 					super.onPostExecute(keyPair);
-					((TextView) address.findViewById(R.id.txt_address))
-							.setText(keyPair.address);
-					((TextView) address.findViewById(R.id.txt_key))
-							.setText(keyPair.privateKey.privateKeyEncoded);
-					address.findViewById(R.id.img_address).setOnClickListener(
-							new View.OnClickListener() {
-								@Override
-								public void onClick(View view) {
-									showQRCodePopup(keyPair.address, true,
-											inflater);
-								}
-							});
-					address.findViewById(R.id.img_key).setOnClickListener(
-							new View.OnClickListener() {
-								@Override
-								public void onClick(View view) {
-									showQRCodePopup(
-											keyPair.privateKey.privateKeyEncoded,
-											false, inflater);
-								}
-							});
+					final String address, key;
+					if (null == keyPair) {
+						address = getString(R.string.not_generate_address);
+						key = "";
+						this.address.findViewById(R.id.img_address)
+								.setOnClickListener(null);
+						this.address.findViewById(R.id.img_key)
+								.setOnClickListener(null);
+					} else {
+						address = keyPair.address;
+						key = keyPair.privateKey.privateKeyEncoded;
+						this.address.findViewById(R.id.img_address)
+								.setOnClickListener(new View.OnClickListener() {
+									@Override
+									public void onClick(View view) {
+										showQRCodePopup(address, true, inflater);
+									}
+								});
+						this.address.findViewById(R.id.img_key)
+								.setOnClickListener(new View.OnClickListener() {
+									@Override
+									public void onClick(View view) {
+										showQRCodePopup(key, false, inflater);
+									}
+								});
+					}
+
+					((TextView) this.address.findViewById(R.id.txt_address))
+							.setText(address);
+					((TextView) this.address.findViewById(R.id.txt_key))
+							.setText(key);
+
 				}
 			}
 
@@ -961,8 +1138,15 @@ public class MainActivity extends Activity {
 		private String getSeed(int index) {
 			String seed = password.getText().toString();
 
-			for (int pos = index; pos < selectedRanks.length; ++pos) {
-				seed += selectedRanks[pos] + selectedSuits[pos];
+			// Go through all the cards
+			for (int pos = 0; pos < numberOfCards; ++pos) {
+				// Move 'index' cards to the end
+				int newPos = pos + index;
+				if (newPos >= numberOfCards) {
+					newPos -= numberOfCards;
+				}
+
+				seed += selectedRanks[newPos] + selectedSuits[newPos];
 			}
 
 			return seed;
