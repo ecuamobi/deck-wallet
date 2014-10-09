@@ -106,7 +106,12 @@ public class MainActivity extends Activity {
 	}
 
 	private void init(Bundle savedInstanceState) {
-		fragment = new PlaceholderFragment();
+		try {
+			fragment = new PlaceholderFragment();
+		} catch (Exception e) {
+			// Can't initialize
+			finish();
+		}
 		if (savedInstanceState == null) {
 			getFragmentManager().beginTransaction()
 					.replace(R.id.container, fragment).commit();
