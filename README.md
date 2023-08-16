@@ -26,10 +26,13 @@ by entering the order of a deck of cards plus an optional password.
 	
 # Links
 - Read more help here:
-http://x.co/deckhelp
+https://bitcointalk.org/?topic=811397
 
--  Download deck Wallet from Google Play:
-https://play.google.com/store/apps/details?id=com.ecuamobi.deckwallet
+- Screenshots:
+https://imgur.com/a/4fdSe
+
+-  Download deck Wallet:
+https://github.com/ecuamobi/deck-wallet/blob/master/market/DeckWallet_1.0.apk?raw=true
 
 - MIT License
 http://en.wikipedia.org/wiki/MIT_License
